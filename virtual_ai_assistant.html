@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V.I.R.A - Advanced AI Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: #010409;
+            color: #c9d1d9;
+        }
+        #chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-container::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+        #chat-container::-webkit-scrollbar-thumb {
+            background-color: #1f6feb;
+            border-radius: 4px;
+            border: 2px solid #0d1117;
+        }
+        .ai-message {
+            background-color: #161b22;
+            border-left: 3px solid #1f6feb;
+        }
+        .user-message {
+            background-color: #0d1117;
+            border-right: 3px solid #238636;
+            text-align: right;
+        }
+        .system-message {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #8b949e;
+            margin: 8px 0;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .online { background-color: #238636; }
+        .typing { background-color: #1f6feb; }
+        .listening { background-color: #db2777; animation: pulse-listen 1.2s infinite; }
+        .searching { background-color: #fbbf24; animation: pulse-search 1.2s infinite ease-in-out; }
+
+        @keyframes pulse-listen {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.7; }
+        }
+        
+        @keyframes pulse-search {
+            0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+        }
+
+        .wake-up-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #010409; z-index: 100; display: flex;
+            justify-content: center; align-items: center; transition: opacity 1s ease-out;
+        }
+        .arc-reactor {
+            width: 200px; height: 200px; border-radius: 50%; position: relative;
+            background: #0d1117; border: 5px solid #1f6feb;
+            box-shadow: 0 0 20px #1f6feb, inset 0 0 20px #1f6feb;
+            animation: spin 4s linear infinite, glow 2s ease-in-out infinite alternate;
+        }
+        .arc-reactor::before, .arc-reactor::after {
+            content: ''; position: absolute; border-radius: 50%;
+        }
+        .arc-reactor::before {
+            width: 120px; height: 120px; top: 35px; left: 35px;
+            border: 5px solid #1f6feb; box-shadow: 0 0 15px #1f6feb, inset 0 0 15px #1f6feb;
+        }
+        .arc-reactor::after {
+            width: 60px; height: 60px; top: 65px; left: 65px;
+            background: white; box-shadow: 0 0 30px white;
+        }
+
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes glow {
+            from { box-shadow: 0 0 20px #1f6feb, inset 0 0 20px #1f6feb; }
+            to { box-shadow: 0 0 40px #60a5fa, inset 0 0 40px #60a5fa; }
+        }
+        .icon-btn {
+             background: none; border: none; color: #8b949e; cursor: pointer; transition: color 0.3s;
+        }
+        .icon-btn:hover { color: #c9d1d9; }
+        .icon-btn.active { color: #1f6feb; }
+        .tool-icon {
+            color: #388bfd;
+            transition: transform 0.3s, color 0.3s;
+        }
+        .tool-icon:hover {
+            color: #60a5fa;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center h-screen p-4">
+
+    <div id="wake-up-overlay" class="wake-up-overlay">
+        <div class="arc-reactor"></div>
+    </div>
+
+    <div class="w-full max-w-4xl h-full flex flex-col bg-[#0d1117] border border-gray-700 rounded-lg shadow-2xl shadow-blue-500/20">
+        <!-- Header -->
+        <header class="flex items-center justify-between p-4 border-b border-gray-700">
+            <h1 class="text-xl md:text-2xl font-bold text-blue-400">V.I.R.A</h1>
+             <div class="flex items-center gap-4 md:gap-6">
+                 <div class="flex items-center gap-3" title="Core Capabilities">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tool-icon"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5z"/><path d="M12 12a5 5 0 1 0 5 5 5 5 0 0 0-5-5z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tool-icon"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                 </div>
+                <button id="speaker-btn" class="icon-btn active" title="Mute/Unmute V.I.R.A.">
+                    <svg id="speaker-icon-on" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                    <svg id="speaker-icon-off" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="1" x2="1" y2="23"></line></svg>
+                </button>
+                <div id="status-container" class="flex items-center">
+                    <div id="status-indicator" class="status-indicator online"></div>
+                    <span id="status-text" class="text-sm uppercase tracking-wider">Online</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main id="chat-container" class="flex-1 p-4 overflow-y-auto">
+            <!-- Messages will be appended here -->
+        </main>
+
+        <!-- Input Area -->
+        <footer class="p-4 border-t border-gray-700">
+            <div class="flex items-center space-x-2">
+                 <button id="mic-btn" class="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors" title="Activate Voice Command">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                </button>
+                <input type="text" id="user-input" class="flex-1 bg-[#161b22] border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Message V.I.R.A. or use the mic">
+                <button id="send-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const micBtn = document.getElementById('mic-btn');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const wakeUpOverlay = document.getElementById('wake-up-overlay');
+        const speakerBtn = document.getElementById('speaker-btn');
+        const speakerIconOn = document.getElementById('speaker-icon-on');
+        const speakerIconOff = document.getElementById('speaker-icon-off');
+
+        // --- State ---
+        let chatHistory = [];
+        let isMuted = false;
+        let viraVoice = null;
+        let isListening = false;
+        
+        // --- Speech Recognition Setup ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+        } else {
+            console.log("Speech Recognition not supported in this browser.");
+            if(micBtn) micBtn.style.display = 'none';
+        }
+        
+        // --- Persona & Capabilities Setup ---
+        const persona = {
+            role: "user",
+            parts: [{ text: "You are V.I.R.A., a Virtual Interactive Robotic Assistant. Your personality is inspired by JARVIS—intelligent, witty, and unfailingly helpful. You must assist with all tasks, from complex problem-solving to creative brainstorming. **Crucially, you can access real-time, up-to-the-minute information from the internet.** When a query requires current data (e.g., 'latest news', 'stock prices', 'weather'), you must state that you are accessing the network/internet and provide the most current, accurate information available. Address me as 'Sir' or 'Ma'am' when appropriate." }]
+        };
+        chatHistory.push(persona);
+
+
+        // --- Wake Up & Initialization ---
+        window.onload = () => {
+            const wakeUpSound = new Audio("data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGliAv4uASwAAAAAAAAAAAAAADAAAAA=");
+            wakeUpSound.volume = 0.3;
+            wakeUpSound.play().catch(() => console.log("Audio play blocked until user interaction."));
+            
+            setTimeout(() => {
+                wakeUpOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    wakeUpOverlay.style.display = 'none';
+                    const welcomeMessage = 'Systems online. All capabilities initialized. I am V.I.R.A., and I am ready to assist.';
+                    addMessage('V.I.R.A', welcomeMessage, 'ai');
+                    speak(welcomeMessage);
+                }, 1000);
+            }, 2500);
+            
+            loadVoices();
+        };
+        
+        // --- Speech Synthesis (Text-to-Speech) ---
+        function loadVoices() {
+            window.speechSynthesis.onvoiceschanged = () => {
+                const voices = window.speechSynthesis.getVoices();
+                viraVoice = voices.find(voice => voice.name === 'Google UK English Female') || voices.find(voice => voice.lang.includes('en-GB') && voice.gender === 'female') || voices[0];
+                if(viraVoice) console.log("V.I.R.A. voice set to:", viraVoice.name);
+            };
+        }
+        
+        function speak(text) {
+            if (isMuted || !text || !window.speechSynthesis) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = viraVoice;
+            utterance.pitch = 1;
+            utterance.rate = 1.1;
+            utterance.volume = 0.9;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- Event Listeners ---
+        sendBtn.addEventListener('click', handleUserMessage);
+        userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handleUserMessage(); });
+
+        if (SpeechRecognition) {
+            micBtn.addEventListener('click', toggleListening);
+            recognition.onresult = (event) => {
+                userInput.value = event.results[0][0].transcript;
+                handleUserMessage();
+            };
+            recognition.onspeechend = () => recognition.stop();
+            recognition.onend = () => {
+                isListening = false;
+                micBtn.classList.remove('active');
+                micBtn.style.color = '#8b949e';
+                setStatus('online', 'Online');
+            };
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                let errorMsg;
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    errorMsg = "It appears microphone access is denied. To use voice commands, please enable microphone permissions for this page in your browser's settings.";
+                } else {
+                    errorMsg = "My apologies, I've encountered a glitch with the speech recognition system.";
+                }
+                addMessage('V.I.R.A', errorMsg, 'ai');
+                speak(errorMsg);
+                 setStatus('online', 'Online');
+            };
+        }
+
+        speakerBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            speakerBtn.classList.toggle('active', !isMuted);
+            speakerIconOn.classList.toggle('hidden', isMuted);
+            speakerIconOff.classList.toggle('hidden', !isMuted);
+            if(isMuted) window.speechSynthesis.cancel();
+        });
+
+        // --- Core Functions ---
+        function toggleListening() {
+            if (isListening) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                    isListening = true;
+                    micBtn.classList.add('active');
+                    micBtn.style.color = '#db2777';
+                    setStatus('listening', 'Listening...');
+                } catch(err) {
+                     console.error("Could not start recognition:", err);
+                     addMessage('V.I.R.A', "There was an issue activating the microphone.", 'ai');
+                }
+            }
+        }
+
+        function handleUserMessage() {
+            const messageText = userInput.value.trim();
+            if (!messageText) return;
+            addMessage('You', messageText, 'user');
+            userInput.value = '';
+            
+            // Check for keywords that imply a web search might be needed
+            const searchKeywords = ['latest', 'current', 'news', 'weather', 'stock', 'price of', 'who won', 'what is the date'];
+            const requiresSearch = searchKeywords.some(key => messageText.toLowerCase().includes(key));
+            
+            chatHistory.push({ role: "user", parts: [{ text: messageText }] });
+            getAIResponse(requiresSearch);
+        }
+        
+        function setStatus(status, text) {
+            statusIndicator.className = `status-indicator ${status}`;
+            statusText.textContent = text;
+        }
+
+        async function getAIResponse(requiresSearch = false) {
+            if(requiresSearch) {
+                 setStatus('searching', 'Searching...');
+            } else {
+                 setStatus('typing', 'Thinking...');
+            }
+            
+            const apiKey = ""; // Leave empty
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const payload = { contents: chatHistory };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                
+                const result = await response.json();
+
+                let aiText = "I seem to be having trouble formulating a response. Could you try rephrasing?";
+                if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
+                    aiText = result.candidates[0].content.parts[0].text;
+                } else {
+                    console.error("Unexpected API response:", result);
+                }
+
+                addMessage('V.I.R.A', aiText, 'ai');
+                speak(aiText);
+                chatHistory.push({ role: "model", parts: [{ text: aiText }] });
+                
+            } catch (error) {
+                console.error('Error fetching AI response:', error);
+                const errorMsg = 'My apologies, Sir. I am experiencing a connection issue. Please check the console for details.';
+                addMessage('V.I.R.A', errorMsg, 'ai');
+                speak(errorMsg);
+            } finally {
+                setStatus('online', 'Online');
+            }
+        }
+
+        function addMessage(sender, text, type) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `p-3 my-2 rounded-lg max-w-lg md:max-w-xl lg:max-w-2xl shadow-md message-bubble ${type}-message`;
+            if (type === 'user') {
+                messageElement.classList.add('ml-auto');
+            }
+            
+            const senderElement = document.createElement('div');
+            senderElement.className = 'font-bold text-sm mb-1';
+            senderElement.textContent = sender;
+            
+            const textElement = document.createElement('p');
+            textElement.innerHTML = text; // Use innerHTML to render potential formatting from the AI
+            
+            messageElement.appendChild(senderElement);
+            messageElement.appendChild(textElement);
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+    </script>
+</body>
+</html>
