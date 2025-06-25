@@ -309,68 +309,62 @@
             statusIndicator.className = `status-indicator ${status}`;
             statusText.textContent = text;
         }
-
         async function getAIResponse(requiresSearch = false) {
-            if(requiresSearch) {
-                 setStatus('searching', 'Searching...');
-            } else {
-                 setStatus('typing', 'Thinking...');
-            }
-            
-            const apiKey = ""; // Leave empty
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-            const payload = { contents: chatHistory };
+    if (requiresSearch) {
+        setStatus('searching', 'Searching...');
+    } else {
+        setStatus('typing', 'Thinking...');
+    }
 
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+    const apiKey = ""; // Leave empty
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const payload = { contents: chatHistory };
 
-                if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                
-                const result = await response.json();
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-                let aiText = "I seem to be having trouble formulating a response. Could you try rephrasing?";
-                if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
-                    aiText = result.candidates[0].content.parts[0].text;
-                } else {
-                    console.error("Unexpected API response:", result);
-                }
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
-                addMessage('V.I.R.A', aiText, 'ai');
-                speak(aiText);
-                chatHistory.push({ role: "model", parts: [{ text: aiText }] });
-                
-            } catch (error) {
-                console.error('Error fetching AI response:', error);
-                const errorMsg = 'My apologies, Sir. I am experiencing a connection issue. Please check the console for details.';
-                addMessage('V.I.R.A', errorMsg, 'ai');
-                speak(errorMsg);
-            } finally {
-                setStatus('online', 'Online');
-            }
+        const result = await response.json();
+        let aiText = "I had a problem formulating a response. Could you rephrase?";
+        if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
+            aiText = result.candidates[0].content.parts[0].text;
         }
 
-        function addMessage(sender, text, type) {
-            const messageElement = document.createElement('div');
-            messageElement.className = `p-3 my-2 rounded-lg max-w-lg md:max-w-xl lg:max-w-2xl shadow-md message-bubble ${type}-message`;
-            if (type === 'user') {
-                messageElement.classList.add('ml-auto');
-            }
-            
-            const senderElement = document.createElement('div');
-            senderElement.className = 'font-bold text-sm mb-1';
-            senderElement.textContent = sender;
-            
-            const textElement = document.createElement('p');
-            textElement.innerHTML = text; // Use innerHTML to render potential formatting from the AI
-            
-            messageElement.appendChild(senderElement);
-            messageElement.appendChild(textElement);
-            chatContainer.appendChild(messageElement);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+        addMessage('V.I.R.A', aiText, 'ai');
+        speak(aiText);
+        chatHistory.push({ role: "model", parts: [{ text: aiText }] });
+
+        // *** NEW: Check for native commands ***
+        handleNativeCommands(aiText);
+
+    } catch (error) {
+        console.error('Error fetching AI response:', error);
+        const errorMsg = 'My apologies, Sir. I am experiencing a connection issue.';
+        addMessage('V.I.R.A', errorMsg, 'ai');
+        speak(errorMsg);
+    } finally {
+        setStatus('online', 'Online');
+    }
+}
+        // *** NEW: Function to call native Android code ***
+function handleNativeCommands(text) {
+    // Check if the "Android" bridge object exists and has the showToast method
+    if (typeof Android !== "undefined" && typeof Android.showToast === 'function') {
+        const lowerCaseText = text.toLowerCase();
+
+        // Example command: if the AI's response includes this phrase, call the native code
+        if (lowerCaseText.includes("running diagnostics")) {
+            Android.showToast("Executing native diagnostics routine from Android.");
+        }
+    }
+}
+
+        
         }
 
     </script>
